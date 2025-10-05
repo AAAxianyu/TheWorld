@@ -7,7 +7,7 @@ import { useGameStore } from '../store/gameStore'
 import toast from 'react-hot-toast'
 
 const SocialPage: React.FC = () => {
-  const { friends, addFriend } = useGameStore()
+  const { friends, addFriend, tasks, generateDynamicAchievement } = useGameStore()
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -16,6 +16,31 @@ const SocialPage: React.FC = () => {
     setSelectedFriend(friendId)
   }
 
+  const handleShareTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId)
+    if (task) {
+      toast.success(`已分享任务"${task.title}"给好友！`, {
+        duration: 2000,
+        icon: '📤'
+      })
+      
+      // 生成动态成就
+      generateDynamicAchievement({
+        tasksCompleted: 1,
+        specialEvents: ['task_sharing']
+      })
+    }
+  }
+
+  const handleCollaborateTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId)
+    if (task) {
+      toast.success(`已邀请好友合作完成"${task.title}"！`, {
+        duration: 2000,
+        icon: '🤝'
+      })
+    }
+  }
 
   const handleAddFriend = () => {
     if (!inviteEmail.trim()) {
@@ -136,7 +161,7 @@ const SocialPage: React.FC = () => {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setShowInviteModal(true)}
+            onClick={handleAddFriend}
             className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center space-x-2"
           >
             <UserPlus size={18} />
@@ -252,37 +277,34 @@ const SocialPage: React.FC = () => {
               className="bg-white rounded-2xl p-6 max-w-sm w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-xl font-bold text-amber-800 mb-4 text-center">添加好友</h2>
-              
-              <div className="mb-4">
-                <label className="block text-amber-700 text-sm font-medium mb-2">
-                  好友用户名
-                </label>
-                <input
-                  type="text"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="输入好友的用户名"
-                  className="w-full px-4 py-3 border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
-              </div>
+               <h2 className="text-xl font-bold text-amber-800 mb-4 text-center">添加好友</h2>
+               
+               <div className="mb-4">
+                 <label className="block text-amber-700 text-sm font-medium mb-2">
+                   好友用户名
+                 </label>
+                 <input
+                   type="text"
+                   value={inviteEmail}
+                   onChange={(e) => setInviteEmail(e.target.value)}
+                   placeholder="输入好友的用户名"
+                   className="w-full px-4 py-3 border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                 />
+               </div>
 
               <div className="flex space-x-3">
                 <button
-                  onClick={() => {
-                    setShowInviteModal(false)
-                    setInviteEmail('')
-                  }}
+                  onClick={() => setShowInviteModal(false)}
                   className="flex-1 py-3 px-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
                 >
                   取消
                 </button>
-                <button
-                  onClick={handleAddFriend}
-                  className="flex-1 py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all"
-                >
-                  添加好友
-                </button>
+                 <button
+                   onClick={handleAddFriend}
+                   className="flex-1 py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all"
+                 >
+                   添加好友
+                 </button>
               </div>
             </motion.div>
           </motion.div>
@@ -334,6 +356,26 @@ const SocialPage: React.FC = () => {
                 <div className="bg-amber-50 rounded-lg p-3">
                   <p className="text-amber-700 text-sm">解锁了"天坛"地点</p>
                   <p className="text-amber-500 text-xs">1天前</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <h3 className="font-semibold text-amber-800">社交互动</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => handleShareTask('explore_throne_room')}
+                    className="bg-blue-500 text-white py-2 px-3 rounded-lg hover:bg-blue-600 transition-colors text-sm flex items-center justify-center space-x-1"
+                  >
+                    <span>📤</span>
+                    <span>分享任务</span>
+                  </button>
+                  <button
+                    onClick={() => handleCollaborateTask('explore_throne_room')}
+                    className="bg-green-500 text-white py-2 px-3 rounded-lg hover:bg-green-600 transition-colors text-sm flex items-center justify-center space-x-1"
+                  >
+                    <span>🤝</span>
+                    <span>合作任务</span>
+                  </button>
                 </div>
               </div>
 

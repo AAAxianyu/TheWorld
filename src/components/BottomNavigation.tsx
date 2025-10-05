@@ -1,7 +1,7 @@
 
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import {Home, List, Trophy, Calendar, Users} from 'lucide-react'
+import {Home, List, Trophy, Calendar, Users, Settings} from 'lucide-react'
 import { motion } from 'framer-motion'
 
 const BottomNavigation: React.FC = () => {
@@ -12,7 +12,8 @@ const BottomNavigation: React.FC = () => {
     { path: '/tasks', icon: List, label: '任务' },
     { path: '/achievements', icon: Trophy, label: '成就' },
     { path: '/events', icon: Calendar, label: '事件' },
-    { path: '/social', icon: Users, label: '社交' }
+    { path: '/social', icon: Users, label: '社交' },
+    { path: '/api-config', icon: Settings, label: '配置' }
   ]
 
   return (

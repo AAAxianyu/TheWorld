@@ -1,5 +1,10 @@
 
 import { create } from 'zustand'
+import { 
+  VirtualLifeService, 
+  LocationInfo, 
+  WeatherInfo
+} from '../services/api'
 
 interface Location {
   id: string
@@ -27,13 +32,23 @@ interface Task {
   id: string
   title: string
   description: string
-  status: 'not_started' | 'in_progress' | 'completed'
+  detailedDescription?: string // 详细任务描述
+  specificTarget?: string // 具体目标（如：太和殿的龙椅）
+  historicalContext?: string // 历史背景
+  status: 'not_started' | 'in_progress' | 'completed' | 'expired'
   progress: number
   maxProgress: number
   reward: string
   timeLimit?: number
   locationId: string
-  type: 'exploration' | 'knowledge' | 'social' | 'collection'
+  type: 'exploration' | 'knowledge' | 'social' | 'collection' | 'limited_time'
+  startTime?: number // 任务开始时间戳
+  endTime?: number // 任务结束时间戳
+  isLimitedTime?: boolean // 是否为限时任务
+  isDynamic?: boolean // 是否为动态生成的任务
+  generatedAt?: number // 任务生成时间戳
+  weatherCondition?: string // 天气条件
+  festivalType?: string // 节日类型
 }
 
 interface Achievement {
@@ -69,15 +84,62 @@ interface Friend {
   tasksCompleted: number
 }
 
+interface NFT {
+  id: string
+  name: string
+  description: string
+  image: string
+  locationId: string
+  rarity: 'common' | 'rare' | 'epic' | 'legendary'
+  unlockDate: number
+  metadata: {
+    explorationTime: number
+    weatherCondition?: string
+    festivalType?: string
+    specialEvent?: string
+  }
+}
+
+interface DynamicAchievement {
+  id: string
+  title: string
+  description: string
+  icon: string
+  completed: boolean
+  progress: number
+  maxProgress: number
+  reward: string
+  type: 'exploration' | 'tasks' | 'social' | 'time' | 'limited_time'
+  unlockCondition: {
+    tasksCompleted?: number
+    locationsUnlocked?: number
+    friendsAdded?: number
+    consecutiveDays?: number
+    specialEvents?: string[]
+  }
+  isDynamic?: boolean
+  generatedAt?: number
+}
+
+interface EnvironmentInfo {
+  location?: LocationInfo
+  weather?: WeatherInfo
+  festival?: string | null
+  season?: string
+}
+
 interface GameState {
   locations: Location[]
   tasks: Task[]
   achievements: Achievement[]
+  dynamicAchievements: DynamicAchievement[]
   events: DynamicEvent[]
   friends: Friend[]
+  nfts: NFT[]
   userLevel: number
   userExperience: number
   currentTime: Date
+  environmentInfo: EnvironmentInfo
   settings: {
     soundEnabled: boolean
     musicEnabled: boolean
@@ -95,6 +157,13 @@ interface GameActions {
   addFriend: (friend: Friend) => void
   updateSettings: (settings: Partial<GameState['settings']>) => void
   updateTime: () => void
+  generateNFT: (locationId: string, metadata?: Record<string, unknown>) => void
+  generateDynamicAchievement: (condition: Record<string, unknown>) => void
+  checkLimitedTimeTasks: () => void
+  startLimitedTimeTask: (taskId: string) => void
+  updateEnvironmentInfo: () => Promise<void>
+  generateDynamicTask: () => Promise<void>
+  removeExpiredDynamicTasks: () => void
 }
 
 export const useGameStore = create<GameState & GameActions>((set) => ({
@@ -195,7 +264,25 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
       description: '皇帝祭天的神圣之地，体现了古代天人合一的思想',
       tasks: ['prayer_ritual', 'understand_cosmology'],
       events: ['spring_prayer'],
-      parentCity: 'beijing'
+      parentCity: 'beijing',
+      guideInfo: {
+        introduction: '天坛是明清两朝皇帝祭天的地方，体现了中国古代"天人合一"的哲学思想。整个建筑群严格按照古代天文学和宇宙观设计，是中华文明的重要象征。',
+        explorationTips: [
+          '建议从南门进入，沿着中轴线向北游览，感受古代建筑的对称美',
+          '祈年殿是必看景点，注意观察28根金丝楠木柱的天象排列',
+          '回音壁是著名的声学奇迹，可以体验古代建筑的智慧',
+          '建议在春秋两季游览，避开夏季高温和冬季严寒',
+          '可以租借语音导览器，深入了解每个建筑的历史意义'
+        ],
+        highlights: [
+          '祈年殿：皇帝祈谷的地方，建筑结构体现天象',
+          '皇穹宇：存放神位的地方，回音壁声学效果神奇',
+          '圜丘坛：祭天的核心建筑，三层圆台象征天圆地方',
+          '丹陛桥：连接南北建筑群的甬道，寓意通天之路'
+        ],
+        bestTime: '春秋两季，特别是清明和重阳时节',
+        duration: '建议游览时间：3-4小时'
+      }
     },
     {
       id: 'summer_palace',
@@ -233,7 +320,25 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
       description: '人间天堂，诗人墨客的灵感源泉',
       tasks: ['lake_cruise', 'poetry_composition'],
       events: ['moon_viewing'],
-      parentCity: 'hangzhou'
+      parentCity: 'hangzhou',
+      guideInfo: {
+        introduction: '西湖是中国最著名的湖泊之一，以其秀美的山水风光和深厚的文化底蕴而闻名于世。这里不仅有自然美景，更承载着千年的文化传承，是文人墨客的灵感源泉。',
+        explorationTips: [
+          '建议从断桥残雪开始游览，这是西湖最著名的景点之一',
+          '乘坐游船游览湖心岛，欣赏三潭印月的奇观',
+          '苏堤春晓是最佳拍照地点，特别是春季桃花盛开时',
+          '可以租借自行车环湖游览，体验不同的观赏角度',
+          '建议在清晨或傍晚游览，避开中午的强烈阳光'
+        ],
+        highlights: [
+          '断桥残雪：许仙白娘子传说的发生地',
+          '三潭印月：西湖的标志性景观，月夜美景',
+          '苏堤春晓：苏轼主持修建的著名堤岸',
+          '雷峰塔：白蛇传说的经典场景'
+        ],
+        bestTime: '春季和秋季，特别是3-5月和9-11月',
+        duration: '建议游览时间：半天到一天'
+      }
     },
     {
       id: 'lingyin_temple',
@@ -343,6 +448,9 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
       id: 'explore_throne_room',
       title: '探索太和殿',
       description: '深入了解紫禁城的心脏——太和殿的历史和建筑特色',
+      detailedDescription: '太和殿是紫禁城内最宏伟的建筑，也是中国古代建筑艺术的巅峰之作。这座大殿高35米，面积2377平方米，是皇帝举行重大典礼的地方。',
+      specificTarget: '仔细观察太和殿内的龙椅（金銮宝座），这是明清两朝皇帝的御座，由紫檀木制成，镶嵌着珍贵的宝石和珍珠。龙椅上方悬挂着"建极绥猷"匾额，寓意皇帝要建立最高的准则，安抚天下。',
+      historicalContext: '太和殿始建于明永乐十八年（1420年），原名奉天殿。清朝康熙年间重建，改名为太和殿。这里见证了明清两朝24位皇帝的登基大典，包括康熙、雍正、乾隆等著名皇帝的即位仪式。',
       status: 'not_started',
       progress: 0,
       maxProgress: 100,
@@ -354,6 +462,9 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
       id: 'learn_palace_history',
       title: '宫廷历史学习',
       description: '学习明清两朝在紫禁城发生的重要历史事件',
+      detailedDescription: '紫禁城作为明清两朝的政治中心，见证了无数重要的历史时刻。从永乐大帝的迁都北京，到康熙皇帝的文治武功，再到乾隆皇帝的盛世辉煌，每一砖一瓦都承载着深厚的历史底蕴。',
+      specificTarget: '重点了解乾清宫的历史，这里是皇帝的寝宫，也是处理日常政务的地方。特别关注康熙皇帝在这里批阅奏折的御案，以及雍正皇帝设立的军机处。',
+      historicalContext: '乾清宫始建于明永乐十八年，是紫禁城内廷的主要建筑。明朝时，这里是皇帝的寝宫；清朝时，皇帝移居养心殿，乾清宫主要用于接见大臣和处理政务。康熙皇帝曾在这里居住61年，是历史上在位时间最长的皇帝。',
       status: 'not_started',
       progress: 0,
       maxProgress: 50,
@@ -365,6 +476,9 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
       id: 'prayer_ritual',
       title: '祭天仪式',
       description: '参与古代皇帝的祭天仪式，了解传统文化',
+      detailedDescription: '天坛是明清两朝皇帝祭天的地方，体现了中国古代"天人合一"的哲学思想。这里每年都会举行盛大的祭天仪式，祈求风调雨顺、国泰民安。',
+      specificTarget: '仔细观察祈年殿内的28根金丝楠木柱，这些柱子按照天象排列：内圈4根代表四季，中圈12根代表12个月，外圈12根代表12个时辰。殿顶的藻井绘有龙凤图案，象征着皇权与天命的结合。',
+      historicalContext: '祈年殿始建于明永乐十八年，原名大祀殿。清朝乾隆年间重建，改名为祈年殿。这里每年正月上辛日举行祈谷大典，祈求五谷丰登。殿内供奉着昊天上帝的神位，是皇帝与天沟通的神圣场所。',
       status: 'not_started',
       progress: 0,
       maxProgress: 1,
@@ -390,6 +504,9 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
       id: 'lake_cruise',
       title: '西湖游船',
       description: '乘坐游船欣赏西湖美景，体验江南水乡风情',
+      detailedDescription: '西湖是中国最著名的湖泊之一，以其秀美的山水风光和深厚的文化底蕴而闻名于世。乘坐游船游览西湖，可以欣赏到"苏堤春晓"、"曲院风荷"、"平湖秋月"等著名景点。',
+      specificTarget: '特别关注三潭印月，这是西湖的标志性景观。三个石塔呈三角形排列，每当月圆之夜，月光透过石塔的圆孔投射到湖面上，形成三个月亮的美景。仔细观察石塔的造型和位置，了解其设计寓意。',
+      historicalContext: '三潭印月始建于北宋元祐年间，由苏轼主持修建。石塔的设计体现了中国古代园林艺术的精髓，既有实用价值（作为航标），又有观赏价值（月夜美景）。这里也是许多文人墨客吟诗作画的地方。',
       status: 'not_started',
       progress: 0,
       maxProgress: 60,
@@ -401,6 +518,9 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
       id: 'poetry_composition',
       title: '诗词创作',
       description: '在西湖美景的启发下创作古诗词',
+      detailedDescription: '西湖自古以来就是文人墨客的灵感源泉，无数脍炙人口的诗词都诞生于此。从白居易的"最爱湖东行不足，绿杨阴里白沙堤"，到苏轼的"欲把西湖比西子，淡妆浓抹总相宜"，西湖的美景激发了无数诗人的创作灵感。',
+      specificTarget: '在苏堤上寻找灵感，这里是最适合创作的地方。仔细观察苏堤的六座桥：映波桥、锁澜桥、望山桥、压堤桥、东浦桥和跨虹桥，每座桥都有其独特的造型和寓意。尝试为其中一座桥创作一首诗。',
+      historicalContext: '苏堤是北宋文学家苏轼在杭州任职时主持修建的，全长2.8公里，横跨西湖。堤上种植着桃树和柳树，形成了"苏堤春晓"的著名景观。这里不仅是交通要道，更是文人雅士聚会吟诗的地方。',
       status: 'not_started',
       progress: 0,
       maxProgress: 40,
@@ -538,6 +658,42 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
       timeLimit: 21600000, // 6小时
       locationId: 'yuyuan_garden',
       type: 'exploration'
+    },
+    
+    // 限时任务示例
+    {
+      id: 'national_day_celebration_task',
+      title: '国庆游园庆典',
+      description: '国庆假期期间，市民可以参与一系列庆祝活动，包括舞龙舞狮、烟花表演和灯光秀。玩家将需要在城市中找到庆祝活动的地点，并完成一系列任务以赢得奖励。',
+      status: 'not_started',
+      progress: 0,
+      maxProgress: 5,
+      reward: '获得"国庆庆典参与者"称号 + 特殊烟花NFT',
+      timeLimit: 172800000, // 48小时
+      locationId: 'beijing',
+      type: 'limited_time',
+      isLimitedTime: true,
+      startTime: Date.now(),
+      endTime: Date.now() + 172800000, // 48小时后
+      festivalType: 'national_day',
+      weatherCondition: 'sunny'
+    },
+    {
+      id: 'rainy_night_jiangnan_task',
+      title: '雨夜江南游',
+      description: '明天预计会下小雨，玩家可以在虚拟世界中体验一场雨夜江南游。任务要求玩家在江南水乡的街道上散步，解锁隐藏的故事和活动，同时避开突如其来的大雨。',
+      status: 'not_started',
+      progress: 0,
+      maxProgress: 3,
+      reward: '获得"雨夜诗人"称号 + 江南雨景NFT',
+      timeLimit: 86400000, // 24小时
+      locationId: 'west_lake',
+      type: 'limited_time',
+      isLimitedTime: true,
+      startTime: Date.now(),
+      endTime: Date.now() + 86400000, // 24小时后
+      weatherCondition: 'rainy',
+      festivalType: 'seasonal'
     }
   ],
 
@@ -588,6 +744,10 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
     }
   ],
 
+  dynamicAchievements: [],
+
+  nfts: [],
+
   events: [
     {
       id: 'imperial_ceremony',
@@ -635,6 +795,12 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
   userLevel: 5,
   userExperience: 1250,
   currentTime: new Date(),
+  environmentInfo: {
+    location: undefined,
+    weather: undefined,
+    festival: null,
+    season: ''
+  },
 
   settings: {
     soundEnabled: true,
@@ -710,5 +876,153 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
 
   updateTime: () => {
     set({ currentTime: new Date() })
+  },
+
+  generateNFT: (locationId: string, metadata: Record<string, unknown> = {}) => {
+    set((state) => {
+      const location = state.locations.find(l => l.id === locationId)
+      if (!location) return state
+
+      const getLocationIcon = (type: string) => {
+        const icons = {
+          palace: '🏰',
+          temple: '🏛️',
+          garden: '🌸',
+          mountain: '⛰️',
+          river: '🌊',
+          village: '🏘️',
+          city: '🏙️'
+        }
+        return icons[type as keyof typeof icons] || '📍'
+      }
+
+      const nft: NFT = {
+        id: `nft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: `${location.name}探索纪念`,
+        description: `在${location.name}的探索纪念物，记录了你的探索时光`,
+        image: getLocationIcon(location.type),
+        locationId: locationId,
+        rarity: Math.random() > 0.8 ? 'legendary' : 
+                Math.random() > 0.6 ? 'epic' : 
+                Math.random() > 0.3 ? 'rare' : 'common',
+        unlockDate: Date.now(),
+        metadata: {
+          explorationTime: Date.now(),
+          ...metadata
+        }
+      }
+
+      return {
+        ...state,
+        nfts: [...state.nfts, nft]
+      }
+    })
+  },
+
+  generateDynamicAchievement: (condition: Record<string, unknown>) => {
+    const achievement: DynamicAchievement = {
+      id: `dynamic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      title: '动态成就',
+      description: '基于你的探索行为自动生成的成就',
+      icon: '🎯',
+      completed: false,
+      progress: 0,
+      maxProgress: 1,
+      reward: '动态奖励',
+      type: 'exploration',
+      unlockCondition: condition,
+      isDynamic: true,
+      generatedAt: Date.now()
+    }
+
+    set((state) => ({
+      dynamicAchievements: [...state.dynamicAchievements, achievement]
+    }))
+  },
+
+  checkLimitedTimeTasks: () => {
+    set((state) => ({
+      tasks: state.tasks.map((task) => {
+        if (task.isLimitedTime && task.endTime && Date.now() > task.endTime) {
+          return { ...task, status: 'expired' }
+        }
+        return task
+      })
+    }))
+  },
+
+  startLimitedTimeTask: (taskId: string) => {
+    set((state) => ({
+      tasks: state.tasks.map((task) =>
+        task.id === taskId && task.isLimitedTime
+          ? { 
+              ...task, 
+              status: 'in_progress',
+              startTime: Date.now()
+            }
+          : task
+      )
+    }))
+  },
+
+  updateEnvironmentInfo: async () => {
+    try {
+      const envInfo = await VirtualLifeService.getEnvironmentInfo()
+      set(() => ({
+        environmentInfo: {
+          location: envInfo.location,
+          weather: envInfo.weather,
+          festival: envInfo.festival,
+          season: envInfo.season
+        }
+      }))
+    } catch (error) {
+      console.error('更新环境信息失败:', error)
+    }
+  },
+
+  generateDynamicTask: async () => {
+    try {
+      const generatedTask = await VirtualLifeService.generateDynamicTask()
+      
+      // 将生成的任务转换为Task格式
+      const newTask: Task = {
+        id: `dynamic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        title: generatedTask.title,
+        description: generatedTask.description,
+        status: 'not_started',
+        progress: 0,
+        maxProgress: 1,
+        reward: generatedTask.reward,
+        timeLimit: generatedTask.duration * 60 * 60 * 1000, // 转换为毫秒
+        locationId: 'beijing', // 默认位置，可以根据实际位置调整
+        type: 'limited_time',
+        isLimitedTime: true,
+        isDynamic: true,
+        generatedAt: Date.now(),
+        weatherCondition: generatedTask.weatherCondition,
+        festivalType: generatedTask.festivalType
+      }
+
+      set((state) => ({
+        tasks: [...state.tasks, newTask]
+      }))
+    } catch (error) {
+      console.error('生成动态任务失败:', error)
+    }
+  },
+
+  removeExpiredDynamicTasks: () => {
+    set((state) => ({
+      tasks: state.tasks.filter((task) => {
+        if (!task.isDynamic || !task.generatedAt || !task.timeLimit) {
+          return true
+        }
+        
+        const now = Date.now()
+        const endTime = task.generatedAt + task.timeLimit
+        return now <= endTime
+      })
+    }))
   }
 }))

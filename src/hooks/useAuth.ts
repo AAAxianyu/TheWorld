@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { lumi } from '../lib/lumi'
 
 // 使用 SDK 提供的 User 类型，或者定义一个更通用的类型
-type User = any // 临时使用 any 类型，避免类型冲突
+type User = Record<string, unknown> // 临时使用通用类型，避免类型冲突
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(lumi.auth.user)

@@ -11,7 +11,7 @@ const SettingsPage: React.FC = () => {
   const navigate = useNavigate()
   const { settings, updateSettings } = useGameStore()
 
-  const handleToggleSetting = (key: keyof typeof settings, value: any) => {
+  const handleToggleSetting = (key: keyof typeof settings, value: boolean | string) => {
     updateSettings({ [key]: value })
     
     const messages = {
@@ -157,9 +157,9 @@ const SettingsPage: React.FC = () => {
                             className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center"
                           >
                             {setting.value ? (
-                              React.createElement((setting.icons as any).on, { size: 12, className: "text-green-600" })
+                              React.createElement((setting.icons as Record<string, unknown>).on as React.ComponentType<{size: number, className: string}>, { size: 12, className: "text-green-600" })
                             ) : (
-                              React.createElement((setting.icons as any).off, { size: 12, className: "text-gray-600" })
+                              React.createElement((setting.icons as Record<string, unknown>).off as React.ComponentType<{size: number, className: string}>, { size: 12, className: "text-gray-600" })
                             )}
                           </motion.div>
                         </motion.button>

@@ -13,15 +13,19 @@ const ProfilePage: React.FC = () => {
     userExperience, 
     locations, 
     tasks, 
-    achievements 
+    achievements,
+    dynamicAchievements,
+    nfts
   } = useGameStore()
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'achievements'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'achievements' | 'nfts'>('overview')
   const [isEditing, setIsEditing] = useState(false)
 
   const unlockedLocations = locations.filter(l => l.unlocked)
   const completedTasks = tasks.filter(t => t.status === 'completed')
   const completedAchievements = achievements.filter(a => a.completed)
+  const completedDynamicAchievements = dynamicAchievements.filter(a => a.completed)
+  const totalNFTs = nfts.length
 
   const experienceToNextLevel = (userLevel * 1000) - (userExperience % 1000)
   const progressPercentage = ((userExperience % 1000) / 1000) * 100
@@ -111,7 +115,7 @@ const ProfilePage: React.FC = () => {
           </div>
 
           {/* 统计数据 */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{unlockedLocations.length}</div>
               <div className="text-xs text-amber-600">已解锁地点</div>
@@ -121,8 +125,12 @@ const ProfilePage: React.FC = () => {
               <div className="text-xs text-amber-600">完成任务</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{completedAchievements.length}</div>
+              <div className="text-2xl font-bold text-purple-600">{completedAchievements.length + completedDynamicAchievements.length}</div>
               <div className="text-xs text-amber-600">获得成就</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{totalNFTs}</div>
+              <div className="text-xs text-amber-600">NFT收藏</div>
             </div>
           </div>
         </motion.div>
@@ -137,11 +145,12 @@ const ProfilePage: React.FC = () => {
           {[
             { key: 'overview', label: '概览', icon: User },
             { key: 'history', label: '历史', icon: History },
-            { key: 'achievements', label: '成就', icon: Trophy }
+            { key: 'achievements', label: '成就', icon: Trophy },
+            { key: 'nfts', label: 'NFT收藏', icon: Star }
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
-              onClick={() => setActiveTab(key as any)}
+              onClick={() => setActiveTab(key as 'overview' | 'history' | 'achievements' | 'nfts')}
               className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === key
                   ? 'bg-amber-600 text-white shadow-md'
@@ -285,6 +294,59 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </motion.div>
                 ))}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'nfts' && (
+            <motion.div
+              key="nfts"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 border border-amber-200">
+                <h2 className="font-bold text-amber-800 mb-4 flex items-center">
+                  <Star size={20} className="mr-2" />
+                  NFT收藏 ({totalNFTs})
+                </h2>
+                
+                {totalNFTs === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">🎨</div>
+                    <p className="text-amber-600 mb-2">还没有NFT收藏</p>
+                    <p className="text-amber-500 text-sm">探索更多地点来收集NFT吧！</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {nfts.map((nft, index) => (
+                      <motion.div
+                        key={nft.id}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.1 * index }}
+                        className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200"
+                      >
+                        <div className="text-center">
+                          <div className="text-3xl mb-2">{nft.image}</div>
+                          <h3 className="font-semibold text-purple-800 mb-1">{nft.name}</h3>
+                          <p className="text-purple-600 text-xs mb-2">{nft.description}</p>
+                          <div className={`text-xs px-2 py-1 rounded-full ${
+                            nft.rarity === 'legendary' ? 'bg-yellow-100 text-yellow-800' :
+                            nft.rarity === 'epic' ? 'bg-purple-100 text-purple-800' :
+                            nft.rarity === 'rare' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {nft.rarity === 'legendary' ? '传说' :
+                             nft.rarity === 'epic' ? '史诗' :
+                             nft.rarity === 'rare' ? '稀有' : '普通'}
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
