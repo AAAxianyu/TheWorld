@@ -1,13 +1,15 @@
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import {Search, Filter, Star, Clock, MapPin, CheckCircle, Circle, Play} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import {Search, Filter, Star, Clock, MapPin, CheckCircle, Circle, Play, BookOpen} from 'lucide-react'
 import TopNavigation from '../components/TopNavigation'
 import { useGameStore } from '../store/gameStore'
 import toast from 'react-hot-toast'
 
 const TasksPage: React.FC = () => {
-  const { tasks, locations, updateTaskProgress, completeTask } = useGameStore()
+  const { tasks, locations, updateTaskProgress, completeTask, westLakePoetryTask } = useGameStore()
+  const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'not_started' | 'in_progress' | 'completed'>('all')
   const [filterType, setFilterType] = useState<'all' | 'exploration' | 'knowledge' | 'social' | 'collection'>('all')
@@ -189,9 +191,84 @@ const TasksPage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* 任务列表 */}
-        <div className="space-y-4">
-          {filteredTasks.map((task, index) => (
+          {/* 任务列表 */}
+          <div className="space-y-4">
+            {/* 西湖诗词创作任务 - 特殊任务卡片 */}
+            {filteredTasks.some(task => task.title.includes('西湖') || task.description.includes('西湖')) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-4 shadow-lg"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-3xl">🌸</div>
+                    <div>
+                      <h3 className="font-bold text-blue-800 text-lg">西湖诗词创作</h3>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          AI交互
+                        </span>
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          文化探索
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <BookOpen className="text-blue-500" size={24} />
+                  </div>
+                </div>
+
+                <p className="text-blue-600 text-sm mb-3">
+                  通过AI互动式问答与创作，了解西湖相关的诗词、诗人及文化背景。完成三阶段任务后解锁更多西湖文化探索。
+                </p>
+
+                <div className="flex items-center text-blue-500 text-sm mb-3">
+                  <MapPin size={14} className="mr-1" />
+                  西湖
+                </div>
+
+                {/* 阶段进度 */}
+                <div className="mb-3">
+                  <div className="text-sm text-blue-600 mb-2">任务阶段进度</div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-blue-600">诗句接龙</span>
+                      <span className="text-xs text-blue-600">
+                        {westLakePoetryTask.stages.poetry_riddle.progress}/{westLakePoetryTask.stages.poetry_riddle.maxProgress}
+                      </span>
+                    </div>
+                    <div className="bg-blue-100 rounded-full h-1.5">
+                      <div 
+                        className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                        style={{ width: `${(westLakePoetryTask.stages.poetry_riddle.progress / westLakePoetryTask.stages.poetry_riddle.maxProgress) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <Star size={14} className="text-yellow-500" />
+                    <span className="text-sm text-blue-600">诗心值 +{westLakePoetryTask.rewards.poetryValue}</span>
+                  </div>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate('/west-lake-poetry')}
+                    className="flex items-center space-x-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm hover:from-blue-700 hover:to-purple-700 transition-all"
+                  >
+                    <BookOpen size={14} />
+                    <span>开始诗词创作</span>
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+
+            {filteredTasks.map((task, index) => (
             <motion.div
               key={task.id}
               initial={{ opacity: 0, y: 20 }}

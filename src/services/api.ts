@@ -18,6 +18,7 @@ export interface LocationInfo {
 export interface WeatherInfo {
   province: string
   city: string
+  adcode: string
   weather: string
   temperature: string
   winddirection: string
@@ -41,6 +42,7 @@ export interface WeatherForecast {
 
 export interface WeatherResponse {
   status: string
+  count: string
   info: string
   infocode: string
   lives: WeatherInfo[]
@@ -64,37 +66,32 @@ export interface GeneratedTask {
 
 // 高德地图API服务
 export class AmapService {
-  // 通过IP获取位置信息
+  // 通过IP获取位置信息（固定为长沙市）
   static async getLocationByIP(): Promise<LocationInfo> {
     try {
-      const response = await fetch(`${AMAP_BASE_URL}/ip?key=${AMAP_API_KEY}`)
-      const data = await response.json()
-      
-      if (data.status === '1') {
-        return {
-          province: data.province,
-          city: data.city,
-          adcode: data.adcode
-        }
-      } else {
-        throw new Error(`API错误: ${data.info}`)
+      // 固定返回长沙市信息
+      return {
+        province: '湖南省',
+        city: '长沙市',
+        adcode: '430100'
       }
     } catch (error) {
       console.error('获取位置信息失败:', error)
-      // 返回默认位置（北京）
+      // 返回默认位置（长沙）
       return {
-        province: '北京市',
-        city: '北京市',
-        adcode: '110000'
+        province: '湖南省',
+        city: '长沙市',
+        adcode: '430100'
       }
     }
   }
 
-  // 获取天气信息
-  static async getWeatherInfo(adcode: string): Promise<WeatherResponse> {
+  // 获取天气信息（固定查询长沙市）
+  static async getWeatherInfo(_adcode: string = '430100'): Promise<WeatherResponse> {
     try {
+      // 固定查询长沙市天气，使用adcode 430100
       const response = await fetch(
-        `${AMAP_BASE_URL}/weather/weatherInfo?city=${adcode}&key=${AMAP_API_KEY}&extensions=all`
+        `${AMAP_BASE_URL}/weather/weatherInfo?city=430100&key=${AMAP_API_KEY}&extensions=all`
       )
       const data = await response.json()
       
@@ -104,8 +101,26 @@ export class AmapService {
         throw new Error(`天气API错误: ${data.info}`)
       }
     } catch (error) {
-      console.error('获取天气信息失败:', error)
-      throw error
+      console.error('获取天气信息失败，使用默认天气:', error)
+      // 返回默认的晴天数据
+      return {
+        status: '1',
+        count: '1',
+        info: 'OK',
+        infocode: '10000',
+        lives: [{
+          province: '湖南省',
+          city: '长沙市',
+          adcode: '430100',
+          weather: '晴',
+          temperature: '25',
+          winddirection: '南风',
+          windpower: '3级',
+          humidity: '60%',
+          reporttime: new Date().toISOString()
+        }],
+        forecasts: []
+      }
     }
   }
 }
@@ -303,7 +318,7 @@ export class FestivalService {
 
 // 综合服务 - 主要的API调用入口
 export class VirtualLifeService {
-  // 获取完整的环境信息（位置+天气+节日）
+  // 获取完整的环境信息（位置+天气+节日）- 固定长沙市
   static async getEnvironmentInfo(): Promise<{
     location: LocationInfo
     weather: WeatherInfo
@@ -311,8 +326,9 @@ export class VirtualLifeService {
     season: string
   }> {
     try {
+      // 固定使用长沙市信息
       const location = await AmapService.getLocationByIP()
-      const weatherData = await AmapService.getWeatherInfo(location.adcode)
+      const weatherData = await AmapService.getWeatherInfo('430100') // 固定使用长沙adcode，失败时返回默认晴天
       const weather = weatherData.lives[0]
       const festival = FestivalService.getCurrentFestival()
       const season = FestivalService.getCurrentSeason()
@@ -324,8 +340,28 @@ export class VirtualLifeService {
         season
       }
     } catch (error) {
-      console.error('获取环境信息失败:', error)
-      throw error
+      console.error('获取环境信息失败，使用默认数据:', error)
+      // 返回默认的环境信息
+      return {
+        location: {
+          province: '湖南省',
+          city: '长沙市',
+          adcode: '430100'
+        },
+        weather: {
+          province: '湖南省',
+          city: '长沙市',
+          adcode: '430100',
+          weather: '晴',
+          temperature: '25',
+          winddirection: '南风',
+          windpower: '3级',
+          humidity: '60%',
+          reporttime: new Date().toISOString()
+        },
+        festival: FestivalService.getCurrentFestival(),
+        season: FestivalService.getCurrentSeason()
+      }
     }
   }
 

@@ -5,6 +5,10 @@ import {
   LocationInfo, 
   WeatherInfo
 } from '../services/api'
+import { 
+  WestLakePoetryTask, 
+  WEST_LAKE_POETRY_TASK_CONFIG 
+} from '../services/westLakePoetryTask'
 
 interface Location {
   id: string
@@ -140,6 +144,7 @@ interface GameState {
   userExperience: number
   currentTime: Date
   environmentInfo: EnvironmentInfo
+  westLakePoetryTask: WestLakePoetryTask
   settings: {
     soundEnabled: boolean
     musicEnabled: boolean
@@ -164,6 +169,9 @@ interface GameActions {
   updateEnvironmentInfo: () => Promise<void>
   generateDynamicTask: () => Promise<void>
   removeExpiredDynamicTasks: () => void
+  updateWestLakePoetryTask: (task: WestLakePoetryTask) => void
+  startWestLakePoetryTask: () => void
+  resetWestLakePoetryTask: () => void
 }
 
 export const useGameStore = create<GameState & GameActions>((set) => ({
@@ -801,6 +809,7 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
     festival: null,
     season: ''
   },
+  westLakePoetryTask: WEST_LAKE_POETRY_TASK_CONFIG,
 
   settings: {
     soundEnabled: true,
@@ -1023,6 +1032,34 @@ export const useGameStore = create<GameState & GameActions>((set) => ({
         const endTime = task.generatedAt + task.timeLimit
         return now <= endTime
       })
+    }))
+  },
+
+  updateWestLakePoetryTask: (task: WestLakePoetryTask) => {
+    set(() => ({
+      westLakePoetryTask: task
+    }))
+  },
+
+  startWestLakePoetryTask: () => {
+    set((state) => ({
+      westLakePoetryTask: {
+        ...state.westLakePoetryTask,
+        stages: {
+          ...state.westLakePoetryTask.stages,
+          [state.westLakePoetryTask.currentStage]: {
+            ...state.westLakePoetryTask.stages[state.westLakePoetryTask.currentStage],
+            status: 'in_progress' as any,
+            unlockedAt: new Date()
+          }
+        }
+      }
+    }))
+  },
+
+  resetWestLakePoetryTask: () => {
+    set(() => ({
+      westLakePoetryTask: WEST_LAKE_POETRY_TASK_CONFIG
     }))
   }
 }))

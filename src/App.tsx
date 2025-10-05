@@ -10,6 +10,7 @@ import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import SocialPage from './pages/SocialPage'
 import LoginPage from './pages/Login'
+import WestLakePoetryTestPage from './pages/WestLakePoetryTestPage'
 import Layout from './components/Layout'
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/social" element={<SocialPage />} />
+          <Route path="/west-lake-poetry" element={<WestLakePoetryTestPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
